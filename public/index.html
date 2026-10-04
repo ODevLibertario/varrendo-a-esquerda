@@ -46,6 +46,41 @@ body {
 .totalized { font-family: var(--font-display); font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .totalized b { color: var(--ink); font-weight: 700; font-size: 22px; }
 
+/* ---------- saúde da coleta (independente dos alertas estatísticos) ---------- */
+.collection-health { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; border: 1px solid #cdd9e7; border-left: 4px solid #56779a; border-radius: 8px; padding: 9px 13px; background: #f5f8fc; font-size: 13px; }
+.collection-health strong { font-weight: 700; white-space: nowrap; }
+.collection-health .last-complete { color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.collection-health[data-state="updated"] { border-color: #c8e3d2; border-left-color: #20804c; background: #f1faf4; }
+.collection-health[data-state="stale"], .collection-health[data-state="error"] { border-color: #efc7c4; border-left-color: #bd4037; background: #fff5f4; }
+.collection-health[data-state="updating"] { border-color: #eadcae; border-left-color: #ad7714; background: #fffaf0; }
+
+/* ---------- ritmo da apuracao nacional ---------- */
+.trend { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; background: #fafbfc; }
+.trend-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.trend h2 { font: 700 20px var(--font-display); text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.trend-total { color: var(--muted); font-size: 13px; }
+.trend-total b { color: var(--ink); font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; }
+.trend-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 310px); gap: 18px; margin-top: 8px; }
+.trend-plot { min-width: 0; }
+.trend-plot svg { width: 100%; height: 148px; display: block; overflow: visible; }
+.trend-plot .axis { stroke: var(--grey-1); stroke-width: 1; }
+.trend-plot .bar-normal { fill: var(--right); }
+.trend-plot .bar-alert { fill: var(--gold); }
+.trend-plot .bar-variation { fill: #8ba7e4; }
+.trend-plot .bar-gap { fill: var(--grey-1); }
+.trend-times { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.trend-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.trend-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.trend-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.trend-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.trend-alerts { border-left: 1px solid var(--line); padding-left: 16px; min-width: 0; }
+.trend-alerts h3 { margin: 0 0 5px; font: 700 16px var(--font-display); text-transform: uppercase; }
+.trend-alerts ol { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; }
+.trend-alerts li { padding: 5px 0; border-top: 1px solid var(--line); font-size: 12px; font-variant-numeric: tabular-nums; }
+.trend-alerts li b { color: #855600; }
+.trend-alerts li span { display: block; }
+.trend-alerts .none { color: var(--muted); }
+
 /* ---------- placar ---------- */
 .score { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
 .score-labels { display: flex; justify-content: space-between; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; font-size: 15px; margin-bottom: 4px; }
@@ -145,6 +180,8 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   .ev .who { font-size: 17px; }
 }
 @media (max-width: 600px) {
+  .trend-grid { grid-template-columns: 1fr; gap: 10px; }
+  .trend-alerts { border-left: 0; border-top: 1px solid var(--line); padding: 8px 0 0; }
   .stage { grid-template-columns: 1fr; }
   .feed { position: relative; top: 0; max-height: 360px; }
 }
@@ -166,6 +203,22 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 </style>
+<!-- Matomo Analytics -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  _paq.push(['disableCookies']);
+  _paq.push(['enableHeartBeatTimer', 15]);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://matomo.hipercube.ia.br/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '27']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
 </head>
 <body>
 
@@ -181,6 +234,29 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
     </div>
     <div class="totalized"><b id="pctSec">0,00%</b> das seções totalizadas</div>
   </div>
+
+  <section class="collection-health" id="collectionHealth" data-state="checking" aria-label="Saúde da coleta" aria-live="polite">
+    <strong id="collectionState">Verificando coleta</strong>
+    <span id="collectionDetail">Consultando o estado dos dados.</span>
+    <span class="last-complete" id="collectionLast">Última rodada completa: nenhuma</span>
+  </section>
+
+  <section class="trend" aria-label="Votos apurados por intervalo no Brasil">
+    <div class="trend-head"><h2>Ritmo da apuração</h2><span class="trend-total"><b id="trendTotal">0</b> votos presidenciais apurados</span></div>
+    <div class="trend-grid">
+      <div class="trend-plot">
+        <svg id="trendChart" viewBox="0 0 700 148" role="img" aria-label="Aguardando histórico de votos"></svg>
+        <div class="trend-times"><span id="trendStart">--:--</span><span id="trendEnd">--:--</span></div>
+        <div class="trend-legend" aria-label="Legenda do gráfico"><span><i style="background:var(--right)"></i>Dentro da faixa</span><span><i style="background:#8ba7e4"></i>Variação ±1σ</span><span><i style="background:var(--gold)"></i>Alerta ±3σ</span></div>
+        <p class="trend-note" id="trendNote">Votos novos a cada 10 minutos · Brasil inteiro</p>
+      </div>
+      <div class="trend-alerts" aria-live="polite">
+        <h3>Alertas estatísticos</h3>
+        <ol id="trendAlerts"><li class="none">Aguardando intervalos suficientes.</li></ol>
+        <p class="trend-note">Comparação com até 12 intervalos anteriores (mínimo 5). Variação: fora de ±1σ; alerta: fora de ±3σ. Nenhum sinal estatístico prova irregularidade.</p>
+      </div>
+    </div>
+  </section>
 
   <section class="score" aria-label="Divisão geral esquerda x direita">
     <div>
@@ -221,16 +297,16 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   </section>
 
   <footer class="refresh">
-    <span class="stamp">Atualizado às <b id="stamp">--:--:--</b></span>
+    <span class="stamp">Arquivo do TSE atualizado às <b id="stamp">--:--:--</b></span>
     <span class="count">
       <svg class="ring" viewBox="0 0 30 30" aria-hidden="true"><circle class="bgc" cx="15" cy="15" r="12"/><circle class="fgc" id="ringFg" cx="15" cy="15" r="12"/></svg>
-      Próxima atualização em <b id="countdown">05:00</b>
+      Nova verificação em <b id="countdown">05:00</b>
     </span>
     <div class="controls">
+      <a id="modeLink" href="?mode=fake">Ver simulação</a>
       <label class="switch"><input type="checkbox" id="fxToggle" checked> Fogos</label>
     </div>
     <span class="note">Horário de Brasília. O intervalo de atualização é definido pelo servidor.</span>
-    <span class="note" id="srcWarn" hidden>Fonte TSE indisponível, mostrando último dado</span>
     <span class="credit">Desenvolvido por <a href="https://x.com/ODevLibertario" target="_blank" rel="noopener">@ODevLibertario</a></span>
   </footer>
 </div>
@@ -367,6 +443,61 @@ function render(prevLean) {
 const feedEl = document.getElementById("feed");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const brTime = d => d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const brDateTime = d => d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+function renderTrend(history, alerts, nationalVotes, intervalSec) {
+  const points = (Array.isArray(history) ? history : []).slice(-40);
+  document.getElementById("trendTotal").textContent = fmtInt(num(nationalVotes?.votesLeft) + num(nationalVotes?.votesRight));
+  const span = intervalSec || 600;
+  document.getElementById("trendNote").textContent = `Votos novos a cada ${span < 60 ? `${span} segundos` : `${Math.round(span / 60)} minutos`} · Brasil inteiro`;
+  const chart = document.getElementById("trendChart");
+  chart.replaceChildren();
+  const usable = points.filter(p => Number.isFinite(p.newVotes) && p.newVotes >= 0);
+  const max = Math.max(1, ...usable.map(p => p.newVotes));
+  const width = 700 / Math.max(1, points.length);
+  const axis = document.createElementNS(NS, "line");
+  axis.setAttribute("x1", "0"); axis.setAttribute("x2", "700");
+  axis.setAttribute("y1", "143"); axis.setAttribute("y2", "143");
+  axis.setAttribute("class", "axis"); chart.appendChild(axis);
+  points.forEach((point, i) => {
+    const bar = document.createElementNS(NS, "rect");
+    const value = Number.isFinite(point.newVotes) ? Math.max(0, point.newVotes) : null;
+    const height = value === null ? 3 : Math.max(3, value / max * 125);
+    bar.setAttribute("x", String(i * width + 1));
+    bar.setAttribute("y", String(143 - height));
+    bar.setAttribute("width", String(Math.max(1, width - 2)));
+    bar.setAttribute("height", String(height));
+    bar.setAttribute("class", value === null ? "bar-gap" : point.severity === "alert" ? "bar-alert" : point.severity === "variation" ? "bar-variation" : "bar-normal");
+    const title = document.createElementNS(NS, "title");
+    title.textContent = `${brTime(new Date(point.at)).slice(0, 5)} · ${value === null ? "sem comparação" : fmtInt(value) + " votos novos"}${point.severity === "alert" ? " · alerta ±3σ" : point.severity === "variation" ? " · variação ±1σ" : ""}`;
+    bar.appendChild(title); chart.appendChild(bar);
+  });
+  chart.setAttribute("aria-label", points.length ? `${points.length} medições nacionais; ${usable.length} intervalos comparáveis; ${points.filter(p => p.severity === "variation").length} variações; ${alerts?.length || 0} alertas fortes` : "Aguardando histórico de votos");
+  document.getElementById("trendStart").textContent = points.length ? brTime(new Date(points[0].at)).slice(0, 5) : "--:--";
+  document.getElementById("trendEnd").textContent = points.length ? brTime(new Date(points.at(-1).at)).slice(0, 5) : "--:--";
+  const list = document.getElementById("trendAlerts");
+  list.replaceChildren();
+  const recent = (Array.isArray(alerts) ? alerts : []).slice(-5).reverse();
+  if (!recent.length) {
+    const item = document.createElement("li"); item.className = "none";
+    item.textContent = usable.length < 6 ? "Aguardando pelo menos 5 intervalos anteriores." : "Nenhum alerta até agora.";
+    list.appendChild(item);
+  }
+  for (const alert of recent) {
+    const item = document.createElement("li");
+    const label = document.createElement("b");
+    label.textContent = `${fmtInt(alert.votes)} votos novos · ${brTime(new Date(alert.at)).slice(0, 5)}`;
+    const expected = document.createElement("span");
+    expected.textContent = `Média: ${fmtInt(alert.mean)} · faixa ±3σ: ${fmtInt(alert.lower)}–${fmtInt(alert.upper)} · ${alert.direction === "acima" ? "acima" : "abaixo"}`;
+    const split = document.createElement("span");
+    split.textContent = `Novos votos: esquerda ${fmtInt(alert.newLeft)} · direita ${fmtInt(alert.newRight)}`;
+    const sections = document.createElement("span");
+    sections.textContent = `Seções recém-totalizadas: ${Number.isFinite(alert.sectionsDeltaPct) ? "+" + alert.sectionsDeltaPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " p.p." : "não disponíveis"}`;
+    const side = document.createElement("span");
+    side.textContent = `Mais votos novos no intervalo: ${["direita", "esquerda"].includes(alert.winner) ? alert.winner : "empate"}`;
+    item.append(label, expected, split, sections, side);
+    list.appendChild(item);
+  }
+}
 let selected = null;          // UF escolhida no mapa (null = Brasil inteiro)
 const allEvents = [];         // todos os eventos recebidos, do mais novo para o mais antigo
 const matches = ev => !selected || String(ev.uf).toUpperCase() === selected;
@@ -477,18 +608,40 @@ function tick() {
   else { running = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
 }
 
-/* ---------- atualização: definida pelo servidor ----------
-   O frontend não decide quando atualizar. O backend envia, via SSE
-   (/api/events), cada novo snapshot com `refreshedAt` e
-   `nextRefreshAt`; a tela só mostra esses horários e conta até o próximo. */
+/* ---------- atualização definida pelo servidor ---------- */
 const cdEl = document.getElementById("countdown"), ring = document.getElementById("ringFg");
 const CIRC = 2 * Math.PI * 12; ring.style.strokeDasharray = CIRC;
 try { const f = localStorage.getItem("varrendo.fx"); if (f !== null) fxToggle.checked = f === "1"; } catch (e) {}
 fxToggle.addEventListener("change", () => { try { localStorage.setItem("varrendo.fx", fxToggle.checked ? "1" : "0"); } catch (e) {} });
 
-let refreshedAt = 0, nextRefreshAt = 0, skew = 0, gotFirst = false;
+let refreshedAt = 0, nextRefreshAt = 0, lastPollAt = 0, skew = 0, gotFirst = false;
+let lastCompleteAt = 0;
 const seen = new Set();
 const num = x => Math.max(0, +x || 0);
+function renderCollection(health) {
+  const states = {
+    scheduled: ["Aguardando 17h", "Os dados oficiais ficam disponíveis a partir das 17h, horário de Brasília."],
+    waiting_first: ["Aguardando primeira rodada", "A coleta começou; ainda não há uma rodada completa validada."],
+    updated: ["Coleta atualizada", "Todos os lotes da última rodada foram validados."],
+    updating: ["Nova rodada pendente", "Aguardando a publicação completa da próxima rodada."],
+    stale: ["Coleta desatualizada", "A última rodada válida tem mais de 20 minutos. Os votos exibidos podem estar defasados."],
+    error: ["Falha na coleta", "Não foi possível validar a rodada atual."],
+    simulation: ["Dados simulados", "Demonstração; estes votos não são resultados do TSE."],
+  };
+  const state = states[health?.state] ? health.state : "error";
+  const [title, detail] = states[state];
+  const at = num(health?.lastCompleteAt) || lastCompleteAt;
+  if (at) lastCompleteAt = at;
+  document.getElementById("collectionHealth").dataset.state = state;
+  document.getElementById("collectionState").textContent = title;
+  document.getElementById("collectionDetail").textContent = state === "error" && !at
+    ? "Ainda não há dados validados. " + detail : detail;
+  const lastEl = document.getElementById("collectionLast");
+  lastEl.hidden = state === "simulation";
+  lastEl.textContent = at
+    ? "Última rodada completa: " + brDateTime(new Date(at)) + " (Brasília)"
+    : "Última rodada completa: nenhuma";
+}
 function onSnapshot(msg) {
   const initial = !gotFirst; gotFirst = true;
   if (msg.serverNow) skew = msg.serverNow - Date.now();
@@ -502,12 +655,19 @@ function onSnapshot(msg) {
   const n = msg.national || {};
   national.prog = Math.min(1, num(n.pctSections)); national.vL = num(n.votesLeft); national.vR = num(n.votesRight);
   render(initial ? null : prev);
+  renderTrend(msg.history, msg.alerts, n, msg.intervalSec);
   races = msg.races || {}; renderPending();
 
-  refreshedAt = msg.refreshedAt || 0; nextRefreshAt = msg.nextRefreshAt || 0;
+  refreshedAt = msg.refreshedAt || 0;
+  lastPollAt = msg.serverNow || Date.now() + skew;
+  pollIntervalMs = msg.mode === "fake"
+    ? Math.max(1000, Math.min(POLL_INTERVAL_MS, (msg.nextRefreshAt || 0) - lastPollAt + 1000))
+    : POLL_INTERVAL_MS;
+  nextRefreshAt = lastPollAt + pollIntervalMs;
   document.getElementById("stamp").textContent = refreshedAt ? brTime(new Date(refreshedAt)) : "--:--:--";
   document.getElementById("chipSample").hidden = msg.mode !== "fake";
-  document.getElementById("srcWarn").hidden = !(msg.source && msg.source.ok === false);
+  renderCollection(msg.collection || { state: msg.mode === "fake" ? "simulation" : msg.source?.ok ? "updated" : "waiting_first",
+    lastCompleteAt: msg.source?.lastCompleteAt || 0 });
 
   // eventos chegam do mais novo para o mais antigo; exibimos do mais antigo para o mais novo
   const fresh = (msg.events || []).filter(ev => ev && ev.id != null && !seen.has(ev.id)).reverse();
@@ -521,7 +681,7 @@ function onSnapshot(msg) {
 function tickClock() {
   if (!nextRefreshAt) { cdEl.textContent = "--:--"; ring.style.strokeDashoffset = CIRC; return; }
   const now = Date.now() + skew;
-  const span = Math.max(1, nextRefreshAt - (refreshedAt || nextRefreshAt - 1));
+  const span = Math.max(1, nextRefreshAt - (lastPollAt || nextRefreshAt - 1));
   const left = Math.max(0, Math.ceil((nextRefreshAt - now) / 1000));
   cdEl.textContent = left > 0 ? String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0") : "aguardando…";
   ring.style.strokeDashoffset = CIRC * (1 - Math.min(1, left * 1000 / span));
@@ -529,8 +689,43 @@ function tickClock() {
 setInterval(tickClock, 1000);
 
 render(null);
-const es = new EventSource("/api/events");
-es.addEventListener("snapshot", e => { try { onSnapshot(JSON.parse(e.data)); } catch (err) { console.warn("snapshot inválido", err); } });
+const demoMode = new URLSearchParams(location.search).get("mode") === "fake";
+const modeLink = document.getElementById("modeLink");
+modeLink.href = demoMode ? location.pathname : "?mode=fake";
+modeLink.textContent = demoMode ? "Ver apuração TSE" : "Ver simulação";
+const POLL_INTERVAL_MS = 60 * 1000;
+let pollIntervalMs = POLL_INTERVAL_MS, refreshTimer, loading = false;
+async function loadSnapshot() {
+  if (document.visibilityState !== "visible" || loading) return;
+  loading = true;
+  try {
+    const url = demoMode ? "/api/state?mode=fake" : "/api/state";
+    const response = await fetch(url, { cache: "no-store" });
+    const message = await response.json();
+    if (!response.ok && !message.source) throw new Error(`HTTP ${response.status}`);
+    onSnapshot(message);
+  } catch (error) {
+    console.warn("snapshot indisponível", error);
+    renderCollection({ state: "error", lastCompleteAt });
+    lastPollAt = Date.now() + skew;
+    nextRefreshAt = lastPollAt + pollIntervalMs;
+    tickClock();
+  } finally {
+    loading = false;
+    if (document.visibilityState === "visible") refreshTimer = setTimeout(loadSnapshot, pollIntervalMs);
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  clearTimeout(refreshTimer);
+  refreshTimer = undefined;
+  if (document.visibilityState === "visible") {
+    loadSnapshot();
+  } else {
+    nextRefreshAt = 0;
+    tickClock();
+  }
+});
+loadSnapshot();
 </script>
 </body>
 </html>

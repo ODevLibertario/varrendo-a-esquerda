@@ -46,7 +46,68 @@ Com um estado selecionado, o painel também mostra **Pendentes**: as disputas da
 - **`parties.json`**: regra do Gilson: **só** os partidos com `"lado": "direita"` contam como direita (PL, NOVO, REPUBLICANOS, MISSÃO, PRD, mais PRC, PSC, PDS, PRONA, PRM e UDN). Todo o resto, inclusive partido desconhecido, é esquerda via `"padrao": "esquerda"`. Não existe mais "centro". Os demais partidos atuais aparecem como `esquerda` só para clareza (o `numero` ajuda quando o arquivo do TSE não traz a sigla). A sigla é comparada sem acento, espaço ou maiúscula (`MISSÃO` = `Missao`). `"ativo": false` marca partido histórico/incorporado (fica na regra, mas a simulação não usa). `overrides` força o lado de um candidato: `{ "sp:15": "direita" }` (uf minúscula + número; `br` para Presidente). Votos anulados ficam fora da soma.
 - **`config.json`**: porta, intervalos, URLs/códigos do TSE (`elections.federal` 6257, `elections.estadual` 6259), `minEventPct` (percentual mínimo para notificar derrota da esquerda), `requestSpacingMs`, `saveRawDir`.
 
-## API
+## API local (Node)
 
 - `GET /api/state` → Snapshot JSON
 - `GET /api/events` → SSE, `event: snapshot` na conexão e a cada atualização; `: ping` a cada 25 s
+
+## Cloudflare Pages
+
+No Pages, os arquivos de `public/` são estáticos e `public/_worker.js` atende à API.
+Um segundo Worker (`src/collector-worker.js`) consulta o TSE por agendamento e
+publica um snapshot compartilhado em Workers KV. São quatro lotes de até 34
+arquivos, com intervalo mínimo de 150 ms entre consultas. Uma rodada completa
+ocorre a cada 10 minutos. A coleta só roda entre 17h de 4/10/2026 e 0h de
+6/10/2026, horário de Brasília. Um 403/429 interrompe a coleta por pelo menos
+10 minutos. O navegador nunca acessa o TSE.
+
+```sh
+npm install
+npm run build
+npm run pages:dev
+npm run collector:deploy
+npm run pages:deploy -- --project-name eleicoesbr --branch main
+```
+
+Os dois arquivos `wrangler*.jsonc` usam o mesmo namespace KV no binding
+`RESULTS`. Para outro projeto Cloudflare, crie um namespace próprio e troque o
+ID nos dois arquivos. O Worker agendado precisa ser publicado antes do Pages.
+O endereço público do Pages é <https://eleicoesbr.pages.dev/>; o Worker coletor
+continua separado com o nome `varrendo-a-esquerda-coletor`.
+Até a primeira rodada, `/api/state` retorna 503 e o painel informa que está
+aguardando dados. Depois, o Pages só lê o snapshot; falhas da fonte preservam
+os últimos dados bons e aparecem em `source`.
+Antes das 17h de Brasília, a API devolve o estado de espera sem consultar o KV.
+A página em modo TSE consulta a API no máximo uma vez por minuto enquanto
+estiver visível; a simulação mantém seu intervalo próprio. Ao voltar de uma aba
+oculta, consulta imediatamente. O endereço antigo
+`varrendo-a-esquerda.pages.dev` está temporariamente em modo estático para
+preservar a cota diária de Pages Functions. Publique `legacy-public/` apenas
+no projeto Pages antigo: novas visitas são redirecionadas para
+`eleicoesbr.pages.dev`, e chamadas antigas a `/api/*` recebem um JSON estático
+sem executar a função. O projeto principal continua sendo publicado de `public/`.
+
+O painel de saúde da coleta, no topo, separa o período anterior às 17h da
+espera pela primeira rodada, de uma coleta atualizada, da próxima rodada
+pendente, de dados desatualizados (mais de 20 minutos sem rodada completa) e de
+erros. Ele mostra a hora, em Brasília, da última rodada integralmente validada;
+`source.lastSuccessAt` continua sendo apenas o último lote bem-sucedido. Em
+`/api/state`, o campo `collection` expõe `state`, `lastCompleteAt` e `error`.
+Falhas de coleta não geram alertas estatísticos de votos.
+
+O modo de demonstração fica em `/?mode=fake`, com dados simulados que avançam
+a cada 20 segundos. O link no rodapé alterna entre simulação e apuração real.
+O gráfico no topo usa os votos presidenciais nacionais de cada snapshot para
+mostrar votos novos por intervalo (10 minutos no modo TSE, 20 segundos na
+simulação). O histórico fica no mesmo snapshot KV, limitado a 144 pontos e 100
+alertas. Após 5 intervalos comparáveis, cada novo intervalo é comparado com a
+média e o desvio padrão dos até 12 anteriores. Fora de ±1σ, o gráfico marca uma
+variação; fora de ±3σ, registra um alerta destacado com votos novos, horário de
+Brasília, média, faixa esperada, votos novos de cada lado e avanço das seções.
+O lado indicado é apenas o que recebeu mais votos *novos* naquele intervalo,
+não o vencedor da eleição. Correções negativas, falhas de coleta e intervalos
+perdidos não geram comparação. O alerta é estatístico: não demonstra
+irregularidade eleitoral por si só.
+No Pages, `/api/events` envia apenas um snapshot para compatibilidade; a página
+usa `/api/state` e agenda a próxima leitura segundo `nextRefreshAt`. Para SSE
+contínuo e `--probe`, use o servidor Node local.

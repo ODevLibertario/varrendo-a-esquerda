@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "varrendo-a-esquerda-coletor",
+  "main": "src/collector-worker.js",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "kv_namespaces": [
+    { "binding": "RESULTS", "id": "d3ea84d5b8b04824972f968abf04b5df" }
+  ],
+  "triggers": {
+    "crons": [
+      "*/10 * * * *",
+      "1-59/10 * * * *",
+      "2-59/10 * * * *",
+      "3-59/10 * * * *"
+    ]
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

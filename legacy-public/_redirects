@@ -1,0 +1,3 @@
+/api/* /api-paused.json 302
+/ https://eleicoesbr.pages.dev/ 302
+/index.html https://eleicoesbr.pages.dev/ 302
