@@ -46,6 +46,14 @@ body {
 .totalized { font-family: var(--font-display); font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .totalized b { color: var(--ink); font-weight: 700; font-size: 22px; }
 
+/* ---------- saúde da coleta (independente dos alertas estatísticos) ---------- */
+.collection-health { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; border: 1px solid #cdd9e7; border-left: 4px solid #56779a; border-radius: 8px; padding: 9px 13px; background: #f5f8fc; font-size: 13px; }
+.collection-health strong { font-weight: 700; white-space: nowrap; }
+.collection-health .last-complete { color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.collection-health[data-state="updated"] { border-color: #c8e3d2; border-left-color: #20804c; background: #f1faf4; }
+.collection-health[data-state="stale"], .collection-health[data-state="error"] { border-color: #efc7c4; border-left-color: #bd4037; background: #fff5f4; }
+.collection-health[data-state="updating"] { border-color: #eadcae; border-left-color: #ad7714; background: #fffaf0; }
+
 /* ---------- ritmo da apuracao nacional ---------- */
 .trend { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; background: #fafbfc; }
 .trend-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
@@ -227,6 +235,12 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
     <div class="totalized"><b id="pctSec">0,00%</b> das seções totalizadas</div>
   </div>
 
+  <section class="collection-health" id="collectionHealth" data-state="checking" aria-label="Saúde da coleta" aria-live="polite">
+    <strong id="collectionState">Verificando coleta</strong>
+    <span id="collectionDetail">Consultando o estado dos dados.</span>
+    <span class="last-complete" id="collectionLast">Última rodada completa: nenhuma</span>
+  </section>
+
   <section class="trend" aria-label="Votos apurados por intervalo no Brasil">
     <div class="trend-head"><h2>Ritmo da apuração</h2><span class="trend-total"><b id="trendTotal">0</b> votos presidenciais apurados</span></div>
     <div class="trend-grid">
@@ -283,17 +297,16 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   </section>
 
   <footer class="refresh">
-    <span class="stamp">Atualizado às <b id="stamp">--:--:--</b></span>
+    <span class="stamp">Arquivo do TSE atualizado às <b id="stamp">--:--:--</b></span>
     <span class="count">
       <svg class="ring" viewBox="0 0 30 30" aria-hidden="true"><circle class="bgc" cx="15" cy="15" r="12"/><circle class="fgc" id="ringFg" cx="15" cy="15" r="12"/></svg>
-      Próxima atualização em <b id="countdown">05:00</b>
+      Nova verificação em <b id="countdown">05:00</b>
     </span>
     <div class="controls">
       <a id="modeLink" href="?mode=fake">Ver simulação</a>
       <label class="switch"><input type="checkbox" id="fxToggle" checked> Fogos</label>
     </div>
     <span class="note">Horário de Brasília. O intervalo de atualização é definido pelo servidor.</span>
-    <span class="note" id="srcWarn" hidden>Fonte TSE indisponível, mostrando último dado</span>
     <span class="credit">Desenvolvido por <a href="https://x.com/ODevLibertario" target="_blank" rel="noopener">@ODevLibertario</a></span>
   </footer>
 </div>
@@ -430,6 +443,7 @@ function render(prevLean) {
 const feedEl = document.getElementById("feed");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const brTime = d => d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const brDateTime = d => d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 function renderTrend(history, alerts, nationalVotes, intervalSec) {
   const points = (Array.isArray(history) ? history : []).slice(-40);
   document.getElementById("trendTotal").textContent = fmtInt(num(nationalVotes?.votesLeft) + num(nationalVotes?.votesRight));
@@ -601,8 +615,33 @@ try { const f = localStorage.getItem("varrendo.fx"); if (f !== null) fxToggle.ch
 fxToggle.addEventListener("change", () => { try { localStorage.setItem("varrendo.fx", fxToggle.checked ? "1" : "0"); } catch (e) {} });
 
 let refreshedAt = 0, nextRefreshAt = 0, skew = 0, gotFirst = false;
+let lastCompleteAt = 0;
 const seen = new Set();
 const num = x => Math.max(0, +x || 0);
+function renderCollection(health) {
+  const states = {
+    scheduled: ["Aguardando 17h", "Os dados oficiais ficam disponíveis a partir das 17h, horário de Brasília."],
+    waiting_first: ["Aguardando primeira rodada", "A coleta começou; ainda não há uma rodada completa validada."],
+    updated: ["Coleta atualizada", "Todos os lotes da última rodada foram validados."],
+    updating: ["Nova rodada pendente", "Aguardando a publicação completa da próxima rodada."],
+    stale: ["Coleta desatualizada", "A última rodada válida tem mais de 20 minutos. Os votos exibidos podem estar defasados."],
+    error: ["Falha na coleta", "Não foi possível validar a rodada atual."],
+    simulation: ["Dados simulados", "Demonstração; estes votos não são resultados do TSE."],
+  };
+  const state = states[health?.state] ? health.state : "error";
+  const [title, detail] = states[state];
+  const at = num(health?.lastCompleteAt) || lastCompleteAt;
+  if (at) lastCompleteAt = at;
+  document.getElementById("collectionHealth").dataset.state = state;
+  document.getElementById("collectionState").textContent = title;
+  document.getElementById("collectionDetail").textContent = state === "error" && !at
+    ? "Ainda não há dados validados. " + detail : detail;
+  const lastEl = document.getElementById("collectionLast");
+  lastEl.hidden = state === "simulation";
+  lastEl.textContent = at
+    ? "Última rodada completa: " + brDateTime(new Date(at)) + " (Brasília)"
+    : "Última rodada completa: nenhuma";
+}
 function onSnapshot(msg) {
   const initial = !gotFirst; gotFirst = true;
   if (msg.serverNow) skew = msg.serverNow - Date.now();
@@ -622,7 +661,8 @@ function onSnapshot(msg) {
   refreshedAt = msg.refreshedAt || 0; nextRefreshAt = msg.nextRefreshAt || 0;
   document.getElementById("stamp").textContent = refreshedAt ? brTime(new Date(refreshedAt)) : "--:--:--";
   document.getElementById("chipSample").hidden = msg.mode !== "fake";
-  document.getElementById("srcWarn").hidden = !(msg.source && msg.source.ok === false);
+  renderCollection(msg.collection || { state: msg.mode === "fake" ? "simulation" : msg.source?.ok ? "updated" : "waiting_first",
+    lastCompleteAt: msg.source?.lastCompleteAt || 0 });
 
   // eventos chegam do mais novo para o mais antigo; exibimos do mais antigo para o mais novo
   const fresh = (msg.events || []).filter(ev => ev && ev.id != null && !seen.has(ev.id)).reverse();
@@ -661,6 +701,7 @@ async function loadSnapshot() {
     refreshTimer = setTimeout(loadSnapshot, delay);
   } catch (error) {
     console.warn("snapshot indisponível", error);
+    renderCollection({ state: "error", lastCompleteAt });
     refreshTimer = setTimeout(loadSnapshot, 15000);
   }
 }

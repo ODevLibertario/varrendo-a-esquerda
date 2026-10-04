@@ -4,6 +4,7 @@ import { emptyStates } from "../lib/tse.js";
 import { createFake } from "../lib/fake.js";
 import { readSnapshot } from "./collector.mjs";
 import { updateVoteTrend } from "./vote-trends.mjs";
+import { collectionHealth } from "./collection-health.mjs";
 
 function emptySnapshot(mode, now, intervalSec) {
   return {
@@ -44,14 +45,17 @@ async function stateResponse(request, env) {
   const url = new URL(request.url);
   const mode = String(url.searchParams.get("mode") || env.MODE || configFile.mode || "tse").toLowerCase() === "fake" ? "fake" : "tse";
   const now = Date.now();
-  if (mode === "fake") return jsonResponse(fakeSnapshot(now));
+  if (mode === "fake") {
+    const snapshot = fakeSnapshot(now);
+    return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
+  }
   try {
     const snapshot = await readSnapshot(env.RESULTS, now);
-    if (snapshot) return jsonResponse(snapshot);
-    return jsonResponse(emptySnapshot(mode, now, 30), 503);
+    if (snapshot) return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
+    return jsonResponse({ ...emptySnapshot(mode, now, 30), collection: collectionHealth(null, now) }, 503);
   } catch (error) {
     console.error(JSON.stringify({ event: "snapshot_read_failed", error: String(error) }));
-    return jsonResponse({ ...emptySnapshot(mode, now, 30),
+    return jsonResponse({ ...emptySnapshot(mode, now, 30), collection: collectionHealth(null, now, { readFailed: true }),
       source: { ok: false, error: "Não foi possível ler a apuração", lastSuccessAt: 0 } }, 503);
   }
 }

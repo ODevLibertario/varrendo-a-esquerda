@@ -76,6 +76,14 @@ Até a primeira rodada, `/api/state` retorna 503 e o painel informa que está
 aguardando dados. Depois, o Pages só lê o snapshot; falhas da fonte preservam
 os últimos dados bons e aparecem em `source`.
 
+O painel de saúde da coleta, no topo, separa o período anterior às 17h da
+espera pela primeira rodada, de uma coleta atualizada, da próxima rodada
+pendente, de dados desatualizados (mais de 20 minutos sem rodada completa) e de
+erros. Ele mostra a hora, em Brasília, da última rodada integralmente validada;
+`source.lastSuccessAt` continua sendo apenas o último lote bem-sucedido. Em
+`/api/state`, o campo `collection` expõe `state`, `lastCompleteAt` e `error`.
+Falhas de coleta não geram alertas estatísticos de votos.
+
 O modo de demonstração fica em `/?mode=fake`, com dados simulados que avançam
 a cada 20 segundos. O link no rodapé alterna entre simulação e apuração real.
 O gráfico no topo usa os votos presidenciais nacionais de cada snapshot para

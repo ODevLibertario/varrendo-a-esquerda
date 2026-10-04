@@ -6,7 +6,7 @@ export const PHASE_COUNT = 4;
 export const INTERVAL_MS = 10 * 60 * 1000;
 export const CRONS = ["*/10 * * * *", "1-59/10 * * * *", "2-59/10 * * * *", "3-59/10 * * * *"];
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
-const START_AT = Date.parse("2026-10-04T20:00:00Z");
+export const START_AT = Date.parse("2026-10-04T20:00:00Z");
 const STOP_AT = Date.parse("2026-10-06T03:00:00Z");
 const batchKey = phase => `batch:v2:${phase}`;
 const snapshotKey = "snapshot:v2";
@@ -125,7 +125,9 @@ export function assembleSnapshot(batches, now = Date.now(), previous = null) {
     nextRefreshAt: errors.length ? now + 30000 : latestCheck + INTERVAL_MS,
     intervalSec: INTERVAL_MS / 1000, national, states, races, events: events.slice(0, 1000),
     ...trend,
-    source: { ok: sourceOk, error: errors.length ? errors.slice(0, 3).join("; ") : null, lastSuccessAt },
+    source: { ok: sourceOk, error: errors.length ? errors.slice(0, 3).join("; ") : null,
+      lastSuccessAt, lastCompleteAt: sourceOk ? now :
+        (previous?.source?.lastCompleteAt || (previous?.source?.ok ? previous.serverNow : 0) || 0) },
   };
 }
 
@@ -133,9 +135,11 @@ export async function readSnapshot(kv, now = Date.now()) {
   const snapshot = await kv.get(snapshotKey, "json");
   if (!snapshot) return null;
   const stale = now - snapshot.serverNow > 20 * 60 * 1000;
+  const source = { ...snapshot.source, lastCompleteAt: snapshot.source?.lastCompleteAt ||
+    (snapshot.source?.ok ? snapshot.serverNow : 0) || 0 };
   return { ...snapshot, serverNow: now,
     nextRefreshAt: stale ? now + 30000 : Math.max(now + 1000, snapshot.nextRefreshAt),
-    source: stale ? { ...snapshot.source, ok: false, error: "Coleta desatualizada" } : snapshot.source };
+    source: stale ? { ...source, ok: false, stale: true, error: "Coleta desatualizada" } : source };
 }
 
 export async function collectPhase({ kv, phase, config, parties, fetchImpl = fetch, now = Date.now,

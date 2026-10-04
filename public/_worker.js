@@ -834,11 +834,31 @@ async function readSnapshot(kv, now = Date.now()) {
   const snapshot = await kv.get(snapshotKey, "json");
   if (!snapshot) return null;
   const stale = now - snapshot.serverNow > 20 * 60 * 1e3;
+  const source = { ...snapshot.source, lastCompleteAt: snapshot.source?.lastCompleteAt || (snapshot.source?.ok ? snapshot.serverNow : 0) || 0 };
   return {
     ...snapshot,
     serverNow: now,
     nextRefreshAt: stale ? now + 3e4 : Math.max(now + 1e3, snapshot.nextRefreshAt),
-    source: stale ? { ...snapshot.source, ok: false, error: "Coleta desatualizada" } : snapshot.source
+    source: stale ? { ...source, ok: false, stale: true, error: "Coleta desatualizada" } : source
+  };
+}
+
+// src/collection-health.mjs
+var STALE_MS = 20 * 60 * 1e3;
+function collectionHealth(snapshot, now = Date.now(), { readFailed = false } = {}) {
+  if (snapshot?.mode === "fake") return { state: "simulation", lastCompleteAt: 0, error: null };
+  const source = snapshot?.source;
+  const lastCompleteAt = source?.lastCompleteAt || (source?.ok ? snapshot.serverNow || 0 : 0);
+  if (readFailed) return { state: "error", lastCompleteAt, error: "N\xE3o foi poss\xEDvel ler a apura\xE7\xE3o" };
+  if (!snapshot) return { state: now < START_AT ? "scheduled" : "waiting_first", lastCompleteAt: 0, error: null };
+  if (source?.stale || lastCompleteAt && now - lastCompleteAt > STALE_MS) {
+    return { state: "stale", lastCompleteAt, error: source?.error || null };
+  }
+  if (source?.ok === false) return { state: "error", lastCompleteAt, error: source.error || null };
+  return {
+    state: lastCompleteAt && now - lastCompleteAt >= INTERVAL_MS ? "updating" : "updated",
+    lastCompleteAt,
+    error: null
   };
 }
 
@@ -893,15 +913,19 @@ async function stateResponse(request, env) {
   const url = new URL(request.url);
   const mode = String(url.searchParams.get("mode") || env.MODE || config_default.mode || "tse").toLowerCase() === "fake" ? "fake" : "tse";
   const now = Date.now();
-  if (mode === "fake") return jsonResponse(fakeSnapshot(now));
+  if (mode === "fake") {
+    const snapshot = fakeSnapshot(now);
+    return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
+  }
   try {
     const snapshot = await readSnapshot(env.RESULTS, now);
-    if (snapshot) return jsonResponse(snapshot);
-    return jsonResponse(emptySnapshot(mode, now, 30), 503);
+    if (snapshot) return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
+    return jsonResponse({ ...emptySnapshot(mode, now, 30), collection: collectionHealth(null, now) }, 503);
   } catch (error) {
     console.error(JSON.stringify({ event: "snapshot_read_failed", error: String(error) }));
     return jsonResponse({
       ...emptySnapshot(mode, now, 30),
+      collection: collectionHealth(null, now, { readFailed: true }),
       source: { ok: false, error: "N\xE3o foi poss\xEDvel ler a apura\xE7\xE3o", lastSuccessAt: 0 }
     }, 503);
   }
