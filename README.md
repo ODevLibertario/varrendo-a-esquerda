@@ -66,12 +66,14 @@ npm install
 npm run build
 npm run pages:dev
 npm run collector:deploy
-npm run pages:deploy -- --project-name varrendo-a-esquerda
+npm run pages:deploy -- --project-name eleicoesbr --branch main
 ```
 
 Os dois arquivos `wrangler*.jsonc` usam o mesmo namespace KV no binding
 `RESULTS`. Para outro projeto Cloudflare, crie um namespace próprio e troque o
 ID nos dois arquivos. O Worker agendado precisa ser publicado antes do Pages.
+O endereço público do Pages é <https://eleicoesbr.pages.dev/>; o Worker coletor
+continua separado com o nome `varrendo-a-esquerda-coletor`.
 Até a primeira rodada, `/api/state` retorna 503 e o painel informa que está
 aguardando dados. Depois, o Pages só lê o snapshot; falhas da fonte preservam
 os últimos dados bons e aparecem em `source`.
