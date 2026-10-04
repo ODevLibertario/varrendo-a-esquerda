@@ -917,6 +917,9 @@ async function stateResponse(request, env) {
     const snapshot = fakeSnapshot(now);
     return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
   }
+  if (now < START_AT) {
+    return jsonResponse({ ...emptySnapshot(mode, now, 60), collection: collectionHealth(null, now) }, 503);
+  }
   try {
     const snapshot = await readSnapshot(env.RESULTS, now);
     if (snapshot) return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });

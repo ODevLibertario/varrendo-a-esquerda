@@ -77,6 +77,11 @@ continua separado com o nome `varrendo-a-esquerda-coletor`.
 Até a primeira rodada, `/api/state` retorna 503 e o painel informa que está
 aguardando dados. Depois, o Pages só lê o snapshot; falhas da fonte preservam
 os últimos dados bons e aparecem em `source`.
+Antes das 17h de Brasília, a API devolve o estado de espera sem consultar o KV.
+A página consulta a API no máximo uma vez por minuto enquanto estiver visível;
+ao voltar de uma aba oculta, consulta imediatamente. O endereço antigo
+`varrendo-a-esquerda.pages.dev` usa o mesmo KV e deve receber a mesma versão
+para não continuar consumindo leituras desnecessárias.
 
 O painel de saúde da coleta, no topo, separa o período anterior às 17h da
 espera pela primeira rodada, de uma coleta atualizada, da próxima rodada

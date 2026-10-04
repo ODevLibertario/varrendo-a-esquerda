@@ -614,7 +614,7 @@ const CIRC = 2 * Math.PI * 12; ring.style.strokeDasharray = CIRC;
 try { const f = localStorage.getItem("varrendo.fx"); if (f !== null) fxToggle.checked = f === "1"; } catch (e) {}
 fxToggle.addEventListener("change", () => { try { localStorage.setItem("varrendo.fx", fxToggle.checked ? "1" : "0"); } catch (e) {} });
 
-let refreshedAt = 0, nextRefreshAt = 0, skew = 0, gotFirst = false;
+let refreshedAt = 0, nextRefreshAt = 0, lastPollAt = 0, skew = 0, gotFirst = false;
 let lastCompleteAt = 0;
 const seen = new Set();
 const num = x => Math.max(0, +x || 0);
@@ -658,7 +658,9 @@ function onSnapshot(msg) {
   renderTrend(msg.history, msg.alerts, n, msg.intervalSec);
   races = msg.races || {}; renderPending();
 
-  refreshedAt = msg.refreshedAt || 0; nextRefreshAt = msg.nextRefreshAt || 0;
+  refreshedAt = msg.refreshedAt || 0;
+  lastPollAt = msg.serverNow || Date.now() + skew;
+  nextRefreshAt = lastPollAt + POLL_INTERVAL_MS;
   document.getElementById("stamp").textContent = refreshedAt ? brTime(new Date(refreshedAt)) : "--:--:--";
   document.getElementById("chipSample").hidden = msg.mode !== "fake";
   renderCollection(msg.collection || { state: msg.mode === "fake" ? "simulation" : msg.source?.ok ? "updated" : "waiting_first",
@@ -676,7 +678,7 @@ function onSnapshot(msg) {
 function tickClock() {
   if (!nextRefreshAt) { cdEl.textContent = "--:--"; ring.style.strokeDashoffset = CIRC; return; }
   const now = Date.now() + skew;
-  const span = Math.max(1, nextRefreshAt - (refreshedAt || nextRefreshAt - 1));
+  const span = Math.max(1, nextRefreshAt - (lastPollAt || nextRefreshAt - 1));
   const left = Math.max(0, Math.ceil((nextRefreshAt - now) / 1000));
   cdEl.textContent = left > 0 ? String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0") : "aguardando…";
   ring.style.strokeDashoffset = CIRC * (1 - Math.min(1, left * 1000 / span));
@@ -688,27 +690,36 @@ const demoMode = new URLSearchParams(location.search).get("mode") === "fake";
 const modeLink = document.getElementById("modeLink");
 modeLink.href = demoMode ? location.pathname : "?mode=fake";
 modeLink.textContent = demoMode ? "Ver apuração TSE" : "Ver simulação";
-let refreshTimer;
+const POLL_INTERVAL_MS = 60 * 1000;
+let refreshTimer, loading = false;
 async function loadSnapshot() {
+  if (document.visibilityState !== "visible" || loading) return;
+  loading = true;
   try {
     const url = demoMode ? "/api/state?mode=fake" : "/api/state";
     const response = await fetch(url, { cache: "no-store" });
     const message = await response.json();
     if (!response.ok && !message.source) throw new Error(`HTTP ${response.status}`);
     onSnapshot(message);
-    const delay = message.source?.ok === false ? 15000 : Math.max(1000, Math.min(15000,
-      (message.nextRefreshAt || 0) - (message.serverNow || Date.now()) + 1000));
-    refreshTimer = setTimeout(loadSnapshot, delay);
   } catch (error) {
     console.warn("snapshot indisponível", error);
     renderCollection({ state: "error", lastCompleteAt });
-    refreshTimer = setTimeout(loadSnapshot, 15000);
+    lastPollAt = Date.now() + skew;
+    nextRefreshAt = lastPollAt + POLL_INTERVAL_MS;
+    tickClock();
+  } finally {
+    loading = false;
+    if (document.visibilityState === "visible") refreshTimer = setTimeout(loadSnapshot, POLL_INTERVAL_MS);
   }
 }
 document.addEventListener("visibilitychange", () => {
+  clearTimeout(refreshTimer);
+  refreshTimer = undefined;
   if (document.visibilityState === "visible") {
-    clearTimeout(refreshTimer);
     loadSnapshot();
+  } else {
+    nextRefreshAt = 0;
+    tickClock();
   }
 });
 loadSnapshot();

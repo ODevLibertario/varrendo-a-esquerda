@@ -2,7 +2,7 @@ import configFile from "../config.json";
 import parties from "../parties.json";
 import { emptyStates } from "../lib/tse.js";
 import { createFake } from "../lib/fake.js";
-import { readSnapshot } from "./collector.mjs";
+import { readSnapshot, START_AT } from "./collector.mjs";
 import { updateVoteTrend } from "./vote-trends.mjs";
 import { collectionHealth } from "./collection-health.mjs";
 
@@ -48,6 +48,9 @@ async function stateResponse(request, env) {
   if (mode === "fake") {
     const snapshot = fakeSnapshot(now);
     return jsonResponse({ ...snapshot, collection: collectionHealth(snapshot, now) });
+  }
+  if (now < START_AT) {
+    return jsonResponse({ ...emptySnapshot(mode, now, 60), collection: collectionHealth(null, now) }, 503);
   }
   try {
     const snapshot = await readSnapshot(env.RESULTS, now);
