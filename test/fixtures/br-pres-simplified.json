@@ -1,0 +1,12 @@
+{
+  "ele": "6257", "cdabr": "br", "t": "1", "f": "s", "pst": "42,31", "dg": "04/10/2026", "hg": "19:12:01",
+  "s": "12345", "st": "212345", "pesi": "42,31", "vv": "40000000", "vn": "1000000", "vb": "500000",
+  "cand": [
+    { "seq": "1", "sqcand": "1", "n": "22", "nm": "FULANO DA DIREITA", "cc": "PL - Partido Liberal", "nv": "", "e": "n", "st": "2º turno", "dvt": "Válido", "vap": "18.500.123", "pvap": "46,25" },
+    { "seq": "2", "sqcand": "2", "n": "13", "nm": "SICRANO DA ESQUERDA", "cc": "Federação Brasil da Esperança - FE BRASIL(PT/PC do B/PV)", "e": "n", "st": "2º turno", "dvt": "Válido", "vap": "17.000.000", "pvap": "42,50" },
+    { "seq": "3", "n": "15", "nm": "BELTRANO DO CENTRO", "cc": "MDB", "e": "n", "st": "Não eleito", "dvt": "Válido", "vap": "3.000.000", "pvap": "7,50" },
+    { "seq": "4", "n": "50", "nm": "PSOLISTA", "cc": "PSOL/REDE", "e": "n", "st": "Não eleito", "dvt": "Válido", "vap": "1.200.000", "pvap": "3,00" },
+    { "seq": "5", "n": "29", "nm": "NANICO", "cc": "PCO", "e": "n", "st": "Não eleito", "dvt": "Válido", "vap": "299.877", "pvap": "0,75" },
+    { "seq": "6", "n": "16", "nm": "CASSADO", "cc": "PSTU", "e": "n", "st": "Não eleito", "dvt": "Anulado", "vap": "50.000", "pvap": "0,00" }
+  ]
+}

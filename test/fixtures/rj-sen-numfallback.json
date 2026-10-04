@@ -1,0 +1,8 @@
+{
+  "pst": "87,5",
+  "cand": [
+    { "n": "221", "nm": "SENADOR SEM PARTIDO", "vap": "3.000.000", "pvap": "38,00", "e": "s", "st": "Eleito", "dvt": "Válido" },
+    { "n": "131", "nm": "SENADORA SEM PARTIDO", "vap": "2.500.000", "pvap": "31,00", "e": "n", "st": "Não eleito", "dvt": "Válido" },
+    { "n": "999", "nm": "DESCONHECIDO", "vap": "10", "pvap": "0,01", "e": "n", "st": "Não eleito", "dvt": "Válido" }
+  ]
+}

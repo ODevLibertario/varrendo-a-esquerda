@@ -1,0 +1,16 @@
+{
+  "ele": 6259, "carper": "3",
+  "abr": [
+    {
+      "tpabr": "UF", "cdabr": "SP", "pst": "100,00", "psa": "100,00",
+      "par": [
+        { "n": "22", "sg": "PL", "nm": "Partido Liberal", "tvtl": "0",
+          "cand": [ { "n": "22", "nmu": "Governador Azul", "nm": "NOME CIVIL AZUL", "vap": "12345678", "pvap": "55,10", "e": "s", "st": "Eleito", "dvt": "Válido" } ] },
+        { "n": "13", "sg": "PT", "nm": "Partido dos Trabalhadores",
+          "cand": [ { "n": "13", "nmu": "Governador Vermelho", "vap": "9.000.000", "pvap": "40,20", "e": "n", "st": "Não eleito", "dvt": "Válido" } ] },
+        { "n": "50", "sg": "PSOL",
+          "cand": [ { "n": "50", "nmu": "Tiny Left", "vap": "100.000", "pvap": "0,45", "e": "n", "st": "Não eleito", "dvt": "Válido" } ] }
+      ]
+    }
+  ]
+}

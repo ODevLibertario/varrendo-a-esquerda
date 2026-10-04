@@ -1,0 +1,36 @@
+{
+  "mode": "tse",
+  "port": 8090,
+  "intervalSec": 300,
+  "fakeIntervalSec": 20,
+  "maxBackoffSec": 600,
+  "eleicao": "2026",
+  "_eleicaoComment": "Escolhe o perfil em 'eleicoes' (sobrescreve campos de 'tse'). Só existe 2026: o TSE não publica mais os arquivos de 2022 (todos dão 404). Variável de ambiente: ELEICAO.",
+  "tse": {
+    "base": "https://resultados.tse.jus.br",
+    "env": "oficial",
+    "configUrl": "{base}/{env}/comum/config/ele-c.json",
+    "cycle": "ele2026",
+    "fallbackCycle": "ele2026",
+    "elections": {
+      "federal": 6257,
+      "estadual": 6259
+    },
+    "resultUrl": "{base}/{env}/{cycle}/{ele}/dados/{uf}/{uf}-c{cargo4}-e{ele6}-u.json",
+    "minEventPct": 0.03,
+    "requestSpacingMs": 150,
+    "timeoutMs": 15000,
+    "saveRawDir": null
+  },
+  "eleicoes": {
+    "2026": {
+      "cycle": "ele2026",
+      "fallbackCycle": "ele2026",
+      "elections": {
+        "federal": 6257,
+        "estadual": 6259
+      },
+      "resultUrl": "{base}/{env}/{cycle}/{ele}/dados/{uf}/{uf}-c{cargo4}-e{ele6}-u.json"
+    }
+  }
+}

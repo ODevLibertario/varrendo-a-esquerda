@@ -1,0 +1,29 @@
+{
+  "ele": "6257", "t": "1", "f": "o", "dg": "04/10/2026", "hg": "19:30:00",
+  "carper": [ { "cd": "1", "nm": "Presidente",
+    "agr": [
+      { "n": "1", "nm": "Coligação Direita", "tp": "c", "par": [
+        { "n": "22", "sg": "PL", "nm": "Partido Liberal", "cand": [ { "n": "22", "sqcand": "1001", "nm": "NOME CIVIL DIREITA", "nmu": "Direitão", "dvt": "Válido" } ] } ] },
+      { "n": "2", "nm": "Federação Brasil da Esperança", "tp": "f", "par": [
+        { "n": "13", "sg": "PT", "nm": "Partido dos Trabalhadores", "cand": [ { "n": "13", "sqcand": "1002", "nm": "NOME CIVIL ESQUERDA", "nmu": "Esquerdão", "dvt": "Válido" } ] } ] },
+      { "n": "3", "nm": "PSOL", "par": [ { "n": "50", "sg": "PSOL", "nm": "Partido Socialismo e Liberdade", "cand": [ { "n": "50", "sqcand": "1003", "nmu": "Psolista", "dvt": "Válido" } ] } ] }
+    ] } ],
+  "abr": [
+    { "tpabr": "PA", "cdabr": "BR",
+      "s": { "ts": "472000", "st": "300000", "pst": "63,56", "snt": "172000", "psnt": "36,44" },
+      "e": { "te": "156000000" },
+      "v": { "vv": "90000000", "pvv": "93,00" },
+      "cand": [
+        { "n": "22", "e": "n", "st": "", "vap": "45.000.000", "pvap": "50,00" },
+        { "n": "13", "e": "n", "st": "", "vap": "40.000.000", "pvap": "44,44" },
+        { "n": "50", "e": "n", "st": "Não eleito", "vap": "4.000.000", "pvap": "4,44" },
+        { "n": "70", "e": "n", "st": "Não eleito", "vap": "1.000.000", "pvap": "1,11" }
+      ] },
+    { "tpabr": "UF", "cdabr": "SP",
+      "s": { "pst": "99,00" },
+      "cand": [
+        { "n": "22", "e": "n", "st": "", "vap": "12.000.000", "pvap": "55,00" },
+        { "n": "13", "e": "n", "st": "", "vap": "9.000.000", "pvap": "41,00" }
+      ] }
+  ]
+}
