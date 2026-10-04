@@ -18,6 +18,13 @@ if (config.eleicoes) {
   config.tse = { ...config.tse, ...config.eleicoes[ELEICAO] };
 }
 const parties = readJson('parties.json');
+let rawCycleAt = null;
+function saveRaw(dir, url, body, at) {
+  rawCycleAt ??= at;
+  const folder = path.resolve(ROOT, dir, new Date(rawCycleAt).toISOString().replace(/[:.]/g, '-'));
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, path.basename(new URL(url).pathname)), body);
+}
 
 const MODE = (process.env.MODE || config.mode || 'tse').toLowerCase() === 'fake' ? 'fake' : 'tse';
 const PORT = Number(process.env.PORT || config.port || 8090);
@@ -29,7 +36,7 @@ log(`eleição ${ELEICAO}: códigos ${config.tse.elections.federal}/${config.tse
 
 // ---------- --probe ----------
 if (process.argv.includes('--probe')) {
-  const poller = createPoller({ config, parties, log });
+  const poller = createPoller({ config, parties, log, saveRaw });
   poller.probe().then(out => {
     console.log(JSON.stringify(out, null, 2));
     process.exit(0);
@@ -65,9 +72,10 @@ if (MODE === 'fake') {
   const tick = () => { fake.step(); apply(); broadcast(); setTimeout(tick, intervalSec * 1000); };
   setTimeout(tick, intervalSec * 1000);
 } else {
-  const poller = createPoller({ config, parties, log });
+  const poller = createPoller({ config, parties, log, saveRaw });
   let failures = 0;
   const run = async () => {
+    rawCycleAt = null;
     const started = Date.now();
     let delaySec = intervalSec;
     try {   // whatever happens, the next cycle is always scheduled (the loop must never die)

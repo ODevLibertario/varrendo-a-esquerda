@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=esm --platform=neutral --loader:.json=json --outfile=public/_worker.js",
+    "test": "node --test",
+    "pages:dev": "npm run build && wrangler pages dev public",
+    "pages:deploy": "npm run build && wrangler pages deploy public",
+    "collector:deploy": "wrangler deploy --config wrangler.collector.jsonc"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "wrangler": "^4.128.0"
+  }
+}

@@ -227,6 +227,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
       Próxima atualização em <b id="countdown">05:00</b>
     </span>
     <div class="controls">
+      <a id="modeLink" href="?mode=fake">Ver simulação</a>
       <label class="switch"><input type="checkbox" id="fxToggle" checked> Fogos</label>
     </div>
     <span class="note">Horário de Brasília. O intervalo de atualização é definido pelo servidor.</span>
@@ -477,10 +478,7 @@ function tick() {
   else { running = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
 }
 
-/* ---------- atualização: definida pelo servidor ----------
-   O frontend não decide quando atualizar. O backend envia, via SSE
-   (/api/events), cada novo snapshot com `refreshedAt` e
-   `nextRefreshAt`; a tela só mostra esses horários e conta até o próximo. */
+/* ---------- atualização definida pelo servidor ---------- */
 const cdEl = document.getElementById("countdown"), ring = document.getElementById("ringFg");
 const CIRC = 2 * Math.PI * 12; ring.style.strokeDasharray = CIRC;
 try { const f = localStorage.getItem("varrendo.fx"); if (f !== null) fxToggle.checked = f === "1"; } catch (e) {}
@@ -529,8 +527,27 @@ function tickClock() {
 setInterval(tickClock, 1000);
 
 render(null);
-const es = new EventSource("/api/events");
-es.addEventListener("snapshot", e => { try { onSnapshot(JSON.parse(e.data)); } catch (err) { console.warn("snapshot inválido", err); } });
+const demoMode = new URLSearchParams(location.search).get("mode") === "fake";
+const modeLink = document.getElementById("modeLink");
+modeLink.href = demoMode ? location.pathname : "?mode=fake";
+modeLink.textContent = demoMode ? "Ver apuração TSE" : "Ver simulação";
+let refreshTimer;
+async function loadSnapshot() {
+  try {
+    const url = demoMode ? "/api/state?mode=fake" : "/api/state";
+    const response = await fetch(url, { cache: "no-store" });
+    const message = await response.json();
+    if (!response.ok && !message.source) throw new Error(`HTTP ${response.status}`);
+    onSnapshot(message);
+    const delay = message.source?.ok === false ? 30000 : Math.max(1000, Math.min(600000,
+      (message.nextRefreshAt || 0) - (message.serverNow || Date.now()) + 1000));
+    refreshTimer = setTimeout(loadSnapshot, delay);
+  } catch (error) {
+    console.warn("snapshot indisponível", error);
+    refreshTimer = setTimeout(loadSnapshot, 30000);
+  }
+}
+loadSnapshot();
 </script>
 </body>
 </html>

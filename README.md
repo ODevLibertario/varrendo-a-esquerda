@@ -46,7 +46,38 @@ Com um estado selecionado, o painel também mostra **Pendentes**: as disputas da
 - **`parties.json`**: regra do Gilson: **só** os partidos com `"lado": "direita"` contam como direita (PL, NOVO, REPUBLICANOS, MISSÃO, PRD, mais PRC, PSC, PDS, PRONA, PRM e UDN). Todo o resto, inclusive partido desconhecido, é esquerda via `"padrao": "esquerda"`. Não existe mais "centro". Os demais partidos atuais aparecem como `esquerda` só para clareza (o `numero` ajuda quando o arquivo do TSE não traz a sigla). A sigla é comparada sem acento, espaço ou maiúscula (`MISSÃO` = `Missao`). `"ativo": false` marca partido histórico/incorporado (fica na regra, mas a simulação não usa). `overrides` força o lado de um candidato: `{ "sp:15": "direita" }` (uf minúscula + número; `br` para Presidente). Votos anulados ficam fora da soma.
 - **`config.json`**: porta, intervalos, URLs/códigos do TSE (`elections.federal` 6257, `elections.estadual` 6259), `minEventPct` (percentual mínimo para notificar derrota da esquerda), `requestSpacingMs`, `saveRawDir`.
 
-## API
+## API local (Node)
 
 - `GET /api/state` → Snapshot JSON
 - `GET /api/events` → SSE, `event: snapshot` na conexão e a cada atualização; `: ping` a cada 25 s
+
+## Cloudflare Pages
+
+No Pages, os arquivos de `public/` são estáticos e `public/_worker.js` atende à API.
+Um segundo Worker (`src/collector-worker.js`) consulta o TSE por agendamento e
+publica um snapshot compartilhado em Workers KV. São quatro lotes de até 34
+arquivos, com intervalo mínimo de 150 ms entre consultas. Uma rodada completa
+ocorre a cada 10 minutos. A coleta só roda entre 17h de 4/10/2026 e 0h de
+6/10/2026, horário de Brasília. Um 403/429 interrompe a coleta por pelo menos
+10 minutos. O navegador nunca acessa o TSE.
+
+```sh
+npm install
+npm run build
+npm run pages:dev
+npm run collector:deploy
+npm run pages:deploy -- --project-name varrendo-a-esquerda
+```
+
+Os dois arquivos `wrangler*.jsonc` usam o mesmo namespace KV no binding
+`RESULTS`. Para outro projeto Cloudflare, crie um namespace próprio e troque o
+ID nos dois arquivos. O Worker agendado precisa ser publicado antes do Pages.
+Até a primeira rodada, `/api/state` retorna 503 e o painel informa que está
+aguardando dados. Depois, o Pages só lê o snapshot; falhas da fonte preservam
+os últimos dados bons e aparecem em `source`.
+
+O modo de demonstração fica em `/?mode=fake`, com dados simulados que avançam
+a cada 20 segundos. O link no rodapé alterna entre simulação e apuração real.
+No Pages, `/api/events` envia apenas um snapshot para compatibilidade; a página
+usa `/api/state` e agenda a próxima leitura segundo `nextRefreshAt`. Para SSE
+contínuo e `--probe`, use o servidor Node local.
