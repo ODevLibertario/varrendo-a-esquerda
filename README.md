@@ -82,10 +82,13 @@ O gráfico no topo usa os votos presidenciais nacionais de cada snapshot para
 mostrar votos novos por intervalo (10 minutos no modo TSE, 20 segundos na
 simulação). O histórico fica no mesmo snapshot KV, limitado a 144 pontos e 100
 alertas. Após 5 intervalos comparáveis, cada novo intervalo é comparado com a
-média ±1 desvio padrão dos até 12 anteriores. Se sair da faixa, registra votos
-novos, horário de Brasília e lado com mais votos *novos* no intervalo. Correções
-negativas, falhas de coleta e intervalos perdidos não geram comparação. O alerta
-é estatístico: não demonstra irregularidade eleitoral por si só.
+média e o desvio padrão dos até 12 anteriores. Fora de ±1σ, o gráfico marca uma
+variação; fora de ±3σ, registra um alerta destacado com votos novos, horário de
+Brasília, média, faixa esperada, votos novos de cada lado e avanço das seções.
+O lado indicado é apenas o que recebeu mais votos *novos* naquele intervalo,
+não o vencedor da eleição. Correções negativas, falhas de coleta e intervalos
+perdidos não geram comparação. O alerta é estatístico: não demonstra
+irregularidade eleitoral por si só.
 No Pages, `/api/events` envia apenas um snapshot para compatibilidade; a página
 usa `/api/state` e agenda a próxima leitura segundo `nextRefreshAt`. Para SSE
 contínuo e `--probe`, use o servidor Node local.

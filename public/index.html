@@ -58,14 +58,19 @@ body {
 .trend-plot .axis { stroke: var(--grey-1); stroke-width: 1; }
 .trend-plot .bar-normal { fill: var(--right); }
 .trend-plot .bar-alert { fill: var(--gold); }
+.trend-plot .bar-variation { fill: #8ba7e4; }
 .trend-plot .bar-gap { fill: var(--grey-1); }
 .trend-times { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.trend-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.trend-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.trend-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 .trend-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
 .trend-alerts { border-left: 1px solid var(--line); padding-left: 16px; min-width: 0; }
 .trend-alerts h3 { margin: 0 0 5px; font: 700 16px var(--font-display); text-transform: uppercase; }
-.trend-alerts ol { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow-y: auto; }
+.trend-alerts ol { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; }
 .trend-alerts li { padding: 5px 0; border-top: 1px solid var(--line); font-size: 12px; font-variant-numeric: tabular-nums; }
 .trend-alerts li b { color: #855600; }
+.trend-alerts li span { display: block; }
 .trend-alerts .none { color: var(--muted); }
 
 /* ---------- placar ---------- */
@@ -228,12 +233,13 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
       <div class="trend-plot">
         <svg id="trendChart" viewBox="0 0 700 148" role="img" aria-label="Aguardando histórico de votos"></svg>
         <div class="trend-times"><span id="trendStart">--:--</span><span id="trendEnd">--:--</span></div>
+        <div class="trend-legend" aria-label="Legenda do gráfico"><span><i style="background:var(--right)"></i>Dentro da faixa</span><span><i style="background:#8ba7e4"></i>Variação ±1σ</span><span><i style="background:var(--gold)"></i>Alerta ±3σ</span></div>
         <p class="trend-note" id="trendNote">Votos novos a cada 10 minutos · Brasil inteiro</p>
       </div>
       <div class="trend-alerts" aria-live="polite">
         <h3>Alertas estatísticos</h3>
         <ol id="trendAlerts"><li class="none">Aguardando intervalos suficientes.</li></ol>
-        <p class="trend-note">Fora da média ±1 desvio padrão dos 12 intervalos anteriores. É um sinal para análise, não prova de irregularidade.</p>
+        <p class="trend-note">Comparação com até 12 intervalos anteriores (mínimo 5). Variação: fora de ±1σ; alerta: fora de ±3σ. Nenhum sinal estatístico prova irregularidade.</p>
       </div>
     </div>
   </section>
@@ -446,12 +452,12 @@ function renderTrend(history, alerts, nationalVotes, intervalSec) {
     bar.setAttribute("y", String(143 - height));
     bar.setAttribute("width", String(Math.max(1, width - 2)));
     bar.setAttribute("height", String(height));
-    bar.setAttribute("class", value === null ? "bar-gap" : point.outlier ? "bar-alert" : "bar-normal");
+    bar.setAttribute("class", value === null ? "bar-gap" : point.severity === "alert" ? "bar-alert" : point.severity === "variation" ? "bar-variation" : "bar-normal");
     const title = document.createElementNS(NS, "title");
-    title.textContent = `${brTime(new Date(point.at)).slice(0, 5)} · ${value === null ? "sem comparação" : fmtInt(value) + " votos novos"}${point.outlier ? " · alerta" : ""}`;
+    title.textContent = `${brTime(new Date(point.at)).slice(0, 5)} · ${value === null ? "sem comparação" : fmtInt(value) + " votos novos"}${point.severity === "alert" ? " · alerta ±3σ" : point.severity === "variation" ? " · variação ±1σ" : ""}`;
     bar.appendChild(title); chart.appendChild(bar);
   });
-  chart.setAttribute("aria-label", points.length ? `${points.length} medições nacionais; ${usable.length} intervalos comparáveis; ${alerts?.length || 0} alertas` : "Aguardando histórico de votos");
+  chart.setAttribute("aria-label", points.length ? `${points.length} medições nacionais; ${usable.length} intervalos comparáveis; ${points.filter(p => p.severity === "variation").length} variações; ${alerts?.length || 0} alertas fortes` : "Aguardando histórico de votos");
   document.getElementById("trendStart").textContent = points.length ? brTime(new Date(points[0].at)).slice(0, 5) : "--:--";
   document.getElementById("trendEnd").textContent = points.length ? brTime(new Date(points.at(-1).at)).slice(0, 5) : "--:--";
   const list = document.getElementById("trendAlerts");
@@ -465,8 +471,16 @@ function renderTrend(history, alerts, nationalVotes, intervalSec) {
   for (const alert of recent) {
     const item = document.createElement("li");
     const label = document.createElement("b");
-    label.textContent = `${fmtInt(alert.votes)} votos`;
-    item.append(label, ` · ${brTime(new Date(alert.at)).slice(0, 5)} · ${alert.direction === "acima" ? "acima" : "abaixo"} da faixa · ${["direita", "esquerda"].includes(alert.winner) ? alert.winner : "empate"}`);
+    label.textContent = `${fmtInt(alert.votes)} votos novos · ${brTime(new Date(alert.at)).slice(0, 5)}`;
+    const expected = document.createElement("span");
+    expected.textContent = `Média: ${fmtInt(alert.mean)} · faixa ±3σ: ${fmtInt(alert.lower)}–${fmtInt(alert.upper)} · ${alert.direction === "acima" ? "acima" : "abaixo"}`;
+    const split = document.createElement("span");
+    split.textContent = `Novos votos: esquerda ${fmtInt(alert.newLeft)} · direita ${fmtInt(alert.newRight)}`;
+    const sections = document.createElement("span");
+    sections.textContent = `Seções recém-totalizadas: ${Number.isFinite(alert.sectionsDeltaPct) ? "+" + alert.sectionsDeltaPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " p.p." : "não disponíveis"}`;
+    const side = document.createElement("span");
+    side.textContent = `Mais votos novos no intervalo: ${["direita", "esquerda"].includes(alert.winner) ? alert.winner : "empate"}`;
+    item.append(label, expected, split, sections, side);
     list.appendChild(item);
   }
 }
@@ -642,14 +656,20 @@ async function loadSnapshot() {
     const message = await response.json();
     if (!response.ok && !message.source) throw new Error(`HTTP ${response.status}`);
     onSnapshot(message);
-    const delay = message.source?.ok === false ? 30000 : Math.max(1000, Math.min(600000,
+    const delay = message.source?.ok === false ? 15000 : Math.max(1000, Math.min(15000,
       (message.nextRefreshAt || 0) - (message.serverNow || Date.now()) + 1000));
     refreshTimer = setTimeout(loadSnapshot, delay);
   } catch (error) {
     console.warn("snapshot indisponível", error);
-    refreshTimer = setTimeout(loadSnapshot, 30000);
+    refreshTimer = setTimeout(loadSnapshot, 15000);
   }
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    clearTimeout(refreshTimer);
+    loadSnapshot();
+  }
+});
 loadSnapshot();
 </script>
 </body>
