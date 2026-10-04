@@ -46,6 +46,28 @@ body {
 .totalized { font-family: var(--font-display); font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .totalized b { color: var(--ink); font-weight: 700; font-size: 22px; }
 
+/* ---------- ritmo da apuracao nacional ---------- */
+.trend { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; background: #fafbfc; }
+.trend-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.trend h2 { font: 700 20px var(--font-display); text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.trend-total { color: var(--muted); font-size: 13px; }
+.trend-total b { color: var(--ink); font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; }
+.trend-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 310px); gap: 18px; margin-top: 8px; }
+.trend-plot { min-width: 0; }
+.trend-plot svg { width: 100%; height: 148px; display: block; overflow: visible; }
+.trend-plot .axis { stroke: var(--grey-1); stroke-width: 1; }
+.trend-plot .bar-normal { fill: var(--right); }
+.trend-plot .bar-alert { fill: var(--gold); }
+.trend-plot .bar-gap { fill: var(--grey-1); }
+.trend-times { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.trend-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.trend-alerts { border-left: 1px solid var(--line); padding-left: 16px; min-width: 0; }
+.trend-alerts h3 { margin: 0 0 5px; font: 700 16px var(--font-display); text-transform: uppercase; }
+.trend-alerts ol { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow-y: auto; }
+.trend-alerts li { padding: 5px 0; border-top: 1px solid var(--line); font-size: 12px; font-variant-numeric: tabular-nums; }
+.trend-alerts li b { color: #855600; }
+.trend-alerts .none { color: var(--muted); }
+
 /* ---------- placar ---------- */
 .score { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
 .score-labels { display: flex; justify-content: space-between; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; font-size: 15px; margin-bottom: 4px; }
@@ -145,6 +167,8 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   .ev .who { font-size: 17px; }
 }
 @media (max-width: 600px) {
+  .trend-grid { grid-template-columns: 1fr; gap: 10px; }
+  .trend-alerts { border-left: 0; border-top: 1px solid var(--line); padding: 8px 0 0; }
   .stage { grid-template-columns: 1fr; }
   .feed { position: relative; top: 0; max-height: 360px; }
 }
@@ -166,6 +190,22 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 </style>
+<!-- Matomo Analytics -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  _paq.push(['disableCookies']);
+  _paq.push(['enableHeartBeatTimer', 15]);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://matomo.hipercube.ia.br/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '27']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
 </head>
 <body>
 
@@ -181,6 +221,22 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); out
     </div>
     <div class="totalized"><b id="pctSec">0,00%</b> das seções totalizadas</div>
   </div>
+
+  <section class="trend" aria-label="Votos apurados por intervalo no Brasil">
+    <div class="trend-head"><h2>Ritmo da apuração</h2><span class="trend-total"><b id="trendTotal">0</b> votos presidenciais apurados</span></div>
+    <div class="trend-grid">
+      <div class="trend-plot">
+        <svg id="trendChart" viewBox="0 0 700 148" role="img" aria-label="Aguardando histórico de votos"></svg>
+        <div class="trend-times"><span id="trendStart">--:--</span><span id="trendEnd">--:--</span></div>
+        <p class="trend-note" id="trendNote">Votos novos a cada 10 minutos · Brasil inteiro</p>
+      </div>
+      <div class="trend-alerts" aria-live="polite">
+        <h3>Alertas estatísticos</h3>
+        <ol id="trendAlerts"><li class="none">Aguardando intervalos suficientes.</li></ol>
+        <p class="trend-note">Fora da média ±1 desvio padrão dos 12 intervalos anteriores. É um sinal para análise, não prova de irregularidade.</p>
+      </div>
+    </div>
+  </section>
 
   <section class="score" aria-label="Divisão geral esquerda x direita">
     <div>
@@ -368,6 +424,52 @@ function render(prevLean) {
 const feedEl = document.getElementById("feed");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const brTime = d => d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+function renderTrend(history, alerts, nationalVotes, intervalSec) {
+  const points = (Array.isArray(history) ? history : []).slice(-40);
+  document.getElementById("trendTotal").textContent = fmtInt(num(nationalVotes?.votesLeft) + num(nationalVotes?.votesRight));
+  const span = intervalSec || 600;
+  document.getElementById("trendNote").textContent = `Votos novos a cada ${span < 60 ? `${span} segundos` : `${Math.round(span / 60)} minutos`} · Brasil inteiro`;
+  const chart = document.getElementById("trendChart");
+  chart.replaceChildren();
+  const usable = points.filter(p => Number.isFinite(p.newVotes) && p.newVotes >= 0);
+  const max = Math.max(1, ...usable.map(p => p.newVotes));
+  const width = 700 / Math.max(1, points.length);
+  const axis = document.createElementNS(NS, "line");
+  axis.setAttribute("x1", "0"); axis.setAttribute("x2", "700");
+  axis.setAttribute("y1", "143"); axis.setAttribute("y2", "143");
+  axis.setAttribute("class", "axis"); chart.appendChild(axis);
+  points.forEach((point, i) => {
+    const bar = document.createElementNS(NS, "rect");
+    const value = Number.isFinite(point.newVotes) ? Math.max(0, point.newVotes) : null;
+    const height = value === null ? 3 : Math.max(3, value / max * 125);
+    bar.setAttribute("x", String(i * width + 1));
+    bar.setAttribute("y", String(143 - height));
+    bar.setAttribute("width", String(Math.max(1, width - 2)));
+    bar.setAttribute("height", String(height));
+    bar.setAttribute("class", value === null ? "bar-gap" : point.outlier ? "bar-alert" : "bar-normal");
+    const title = document.createElementNS(NS, "title");
+    title.textContent = `${brTime(new Date(point.at)).slice(0, 5)} · ${value === null ? "sem comparação" : fmtInt(value) + " votos novos"}${point.outlier ? " · alerta" : ""}`;
+    bar.appendChild(title); chart.appendChild(bar);
+  });
+  chart.setAttribute("aria-label", points.length ? `${points.length} medições nacionais; ${usable.length} intervalos comparáveis; ${alerts?.length || 0} alertas` : "Aguardando histórico de votos");
+  document.getElementById("trendStart").textContent = points.length ? brTime(new Date(points[0].at)).slice(0, 5) : "--:--";
+  document.getElementById("trendEnd").textContent = points.length ? brTime(new Date(points.at(-1).at)).slice(0, 5) : "--:--";
+  const list = document.getElementById("trendAlerts");
+  list.replaceChildren();
+  const recent = (Array.isArray(alerts) ? alerts : []).slice(-5).reverse();
+  if (!recent.length) {
+    const item = document.createElement("li"); item.className = "none";
+    item.textContent = usable.length < 6 ? "Aguardando pelo menos 5 intervalos anteriores." : "Nenhum alerta até agora.";
+    list.appendChild(item);
+  }
+  for (const alert of recent) {
+    const item = document.createElement("li");
+    const label = document.createElement("b");
+    label.textContent = `${fmtInt(alert.votes)} votos`;
+    item.append(label, ` · ${brTime(new Date(alert.at)).slice(0, 5)} · ${alert.direction === "acima" ? "acima" : "abaixo"} da faixa · ${["direita", "esquerda"].includes(alert.winner) ? alert.winner : "empate"}`);
+    list.appendChild(item);
+  }
+}
 let selected = null;          // UF escolhida no mapa (null = Brasil inteiro)
 const allEvents = [];         // todos os eventos recebidos, do mais novo para o mais antigo
 const matches = ev => !selected || String(ev.uf).toUpperCase() === selected;
@@ -500,6 +602,7 @@ function onSnapshot(msg) {
   const n = msg.national || {};
   national.prog = Math.min(1, num(n.pctSections)); national.vL = num(n.votesLeft); national.vR = num(n.votesRight);
   render(initial ? null : prev);
+  renderTrend(msg.history, msg.alerts, n, msg.intervalSec);
   races = msg.races || {}; renderPending();
 
   refreshedAt = msg.refreshedAt || 0; nextRefreshAt = msg.nextRefreshAt || 0;

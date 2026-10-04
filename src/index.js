@@ -3,12 +3,13 @@ import parties from "../parties.json";
 import { emptyStates } from "../lib/tse.js";
 import { createFake } from "../lib/fake.js";
 import { readSnapshot } from "./collector.mjs";
+import { updateVoteTrend } from "./vote-trends.mjs";
 
 function emptySnapshot(mode, now, intervalSec) {
   return {
     mode, serverNow: now, refreshedAt: 0, nextRefreshAt: now + intervalSec * 1000, intervalSec,
     national: { pctSections: 0, votesLeft: 0, votesRight: 0 },
-    states: emptyStates(), races: {}, events: [],
+    states: emptyStates(), races: {}, events: [], history: [], alerts: [],
     source: { ok: false, error: "Aguardando a primeira coleta do TSE", lastSuccessAt: 0 },
   };
 }
@@ -20,12 +21,15 @@ function fakeSnapshot(now) {
   const steps = bucket % 30;
   let simulatedNow = period * 30 * intervalMs;
   const fake = createFake(parties, { idPrefix: `pages-${period}`, now: () => simulatedNow });
+  let trend = updateVoteTrend(null, fake.data().national, simulatedNow, intervalMs);
   for (let step = 0; step < steps; step++) {
     simulatedNow += intervalMs;
     fake.step();
+    trend = updateVoteTrend(trend, fake.data().national, simulatedNow, intervalMs);
   }
   return { ...fake.data(), mode: "fake", serverNow: now, refreshedAt: bucket * intervalMs,
     nextRefreshAt: (bucket + 1) * intervalMs, intervalSec: intervalMs / 1000,
+    ...trend,
     source: { ok: true, error: null, lastSuccessAt: bucket * intervalMs } };
 }
 

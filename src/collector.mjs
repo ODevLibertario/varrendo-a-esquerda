@@ -1,4 +1,5 @@
 import tse from "../lib/tse.js";
+import { updateVoteTrend } from "./vote-trends.mjs";
 
 const { UFS, OFFICES, depEstadualCargo, resultUrl, indexParties, parseResult, raceSummary, eventsFrom, emptyStates } = tse;
 export const PHASE_COUNT = 4;
@@ -94,7 +95,7 @@ async function fetchJob(job, prior, config, partiesIndex, fetchImpl, now) {
   } finally { clearTimeout(timeout); }
 }
 
-export function assembleSnapshot(batches, now = Date.now()) {
+export function assembleSnapshot(batches, now = Date.now(), previous = null) {
   const states = emptyStates(), races = {}, events = [];
   let national = { pctSections: 0, votesLeft: 0, votesRight: 0 };
   let refreshedAt = 0, lastSuccessAt = 0;
@@ -117,11 +118,14 @@ export function assembleSnapshot(batches, now = Date.now()) {
   if (!refreshedAt) errors.push("nenhum resultado do TSE disponível");
   events.sort((a, b) => b.at - a.at);
   const latestCheck = Math.max(0, ...batches.map(batch => batch?.checkedAt || 0));
+  const sourceOk = errors.length === 0;
+  const trend = updateVoteTrend(previous, national, now, INTERVAL_MS, sourceOk);
   return {
     mode: "tse", serverNow: now, refreshedAt,
     nextRefreshAt: errors.length ? now + 30000 : latestCheck + INTERVAL_MS,
     intervalSec: INTERVAL_MS / 1000, national, states, races, events: events.slice(0, 1000),
-    source: { ok: errors.length === 0, error: errors.length ? errors.slice(0, 3).join("; ") : null, lastSuccessAt },
+    ...trend,
+    source: { ok: sourceOk, error: errors.length ? errors.slice(0, 3).join("; ") : null, lastSuccessAt },
   };
 }
 
@@ -190,7 +194,8 @@ export async function collectPhase({ kv, phase, config, parties, fetchImpl = fet
     const batches = await Promise.all(Array.from({ length: PHASE_COUNT }, (_, index) =>
       index === phase ? current : kv.get(batchKey(index), "json")));
     if (batches.every(batch => batch?.slot === slot)) {
-      await kv.put(snapshotKey, JSON.stringify(assembleSnapshot(batches, now())));
+      const previousSnapshot = await kv.get(snapshotKey, "json");
+      await kv.put(snapshotKey, JSON.stringify(assembleSnapshot(batches, now(), previousSnapshot)));
     }
   }
   return { phase, fetched: phaseJobs(config, phase).length, errors: errors.length, checkedAt: current.checkedAt };

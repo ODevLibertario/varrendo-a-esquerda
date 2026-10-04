@@ -78,6 +78,14 @@ os últimos dados bons e aparecem em `source`.
 
 O modo de demonstração fica em `/?mode=fake`, com dados simulados que avançam
 a cada 20 segundos. O link no rodapé alterna entre simulação e apuração real.
+O gráfico no topo usa os votos presidenciais nacionais de cada snapshot para
+mostrar votos novos por intervalo (10 minutos no modo TSE, 20 segundos na
+simulação). O histórico fica no mesmo snapshot KV, limitado a 144 pontos e 100
+alertas. Após 5 intervalos comparáveis, cada novo intervalo é comparado com a
+média ±1 desvio padrão dos até 12 anteriores. Se sair da faixa, registra votos
+novos, horário de Brasília e lado com mais votos *novos* no intervalo. Correções
+negativas, falhas de coleta e intervalos perdidos não geram comparação. O alerta
+é estatístico: não demonstra irregularidade eleitoral por si só.
 No Pages, `/api/events` envia apenas um snapshot para compatibilidade; a página
 usa `/api/state` e agenda a próxima leitura segundo `nextRefreshAt`. Para SSE
 contínuo e `--probe`, use o servidor Node local.

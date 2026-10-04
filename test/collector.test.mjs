@@ -40,6 +40,9 @@ test("coleta a eleição em quatro lotes e publica um único snapshot", async ()
   assert.equal(snapshot.national.votesRight, 600);
   assert.equal(snapshot.states.SP.votesLeft, 400);
   assert.equal(snapshot.races.SP.length, 4);
+  assert.equal(snapshot.history.length, 1);
+  assert.equal(snapshot.history[0].totalVotes, 1000);
+  assert.deepEqual(snapshot.alerts, []);
   assert.ok(requests.some(url => url.includes("/dados/df/df-c0008-")));
   assert.equal(kv.data.has("snapshot:v2"), true);
 });
