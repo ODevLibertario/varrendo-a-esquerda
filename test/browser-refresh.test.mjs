@@ -8,7 +8,7 @@ const start = html.indexOf("/* ---------- atualização definida pelo servidor -
 assert.ok(start > 0);
 const script = html.slice(start, html.indexOf("</script>", start));
 
-function browser(initialVisibility = "visible") {
+function browser(initialVisibility = "visible", demo = false) {
   let visibility = initialVisibility, requests = 0, timerId = 0;
   const timers = new Map(), handlers = {}, elements = new Map();
   const element = id => {
@@ -19,7 +19,7 @@ function browser(initialVisibility = "visible") {
     document: { get visibilityState() { return visibility; }, getElementById: element,
       addEventListener(type, fn) { handlers[type] = fn; } },
     fxToggle: element("fxToggle"), localStorage: { getItem: () => null },
-    location: { search: "", pathname: "/" }, URLSearchParams,
+    location: { search: demo ? "?mode=fake" : "", pathname: "/" }, URLSearchParams,
     UFS: [], state: {}, national: {}, races: {},
     render() {}, renderTrend() {}, renderPending() {}, lean: x => x,
     brTime: () => "", brDateTime: () => "", addEvent() {},
@@ -29,9 +29,10 @@ function browser(initialVisibility = "visible") {
     clearTimeout(id) { timers.delete(id); },
     async fetch() {
       requests++;
-      return { ok: false, async json() { return {
-        mode: "tse", serverNow: Date.now(), nextRefreshAt: Date.now() + 30000,
-        source: { ok: false }, collection: { state: "scheduled", lastCompleteAt: 0 },
+      return { ok: demo, async json() { const now = Date.now(); return {
+        mode: demo ? "fake" : "tse", serverNow: now,
+        nextRefreshAt: now + (demo ? 20000 : 30000),
+        source: { ok: demo }, collection: { state: demo ? "simulation" : "scheduled", lastCompleteAt: 0 },
         national: {}, states: {}, races: {}, events: [], history: [], alerts: [],
       }; } };
     },
@@ -46,6 +47,13 @@ test("aba visível consulta no máximo uma vez por minuto", async () => {
   await page.ready;
   assert.equal(page.requests, 1);
   assert.deepEqual([...page.timers.values()].map(timer => timer.ms), [60000]);
+});
+
+test("simulação mantém o intervalo próprio sem leituras do KV", async () => {
+  const page = browser("visible", true);
+  await page.ready;
+  assert.equal(page.requests, 1);
+  assert.deepEqual([...page.timers.values()].map(timer => timer.ms), [21000]);
 });
 
 test("aba inicialmente oculta espera ficar visível antes de consultar", async () => {

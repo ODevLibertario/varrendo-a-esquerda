@@ -660,7 +660,10 @@ function onSnapshot(msg) {
 
   refreshedAt = msg.refreshedAt || 0;
   lastPollAt = msg.serverNow || Date.now() + skew;
-  nextRefreshAt = lastPollAt + POLL_INTERVAL_MS;
+  pollIntervalMs = msg.mode === "fake"
+    ? Math.max(1000, Math.min(POLL_INTERVAL_MS, (msg.nextRefreshAt || 0) - lastPollAt + 1000))
+    : POLL_INTERVAL_MS;
+  nextRefreshAt = lastPollAt + pollIntervalMs;
   document.getElementById("stamp").textContent = refreshedAt ? brTime(new Date(refreshedAt)) : "--:--:--";
   document.getElementById("chipSample").hidden = msg.mode !== "fake";
   renderCollection(msg.collection || { state: msg.mode === "fake" ? "simulation" : msg.source?.ok ? "updated" : "waiting_first",
@@ -691,7 +694,7 @@ const modeLink = document.getElementById("modeLink");
 modeLink.href = demoMode ? location.pathname : "?mode=fake";
 modeLink.textContent = demoMode ? "Ver apuração TSE" : "Ver simulação";
 const POLL_INTERVAL_MS = 60 * 1000;
-let refreshTimer, loading = false;
+let pollIntervalMs = POLL_INTERVAL_MS, refreshTimer, loading = false;
 async function loadSnapshot() {
   if (document.visibilityState !== "visible" || loading) return;
   loading = true;
@@ -705,11 +708,11 @@ async function loadSnapshot() {
     console.warn("snapshot indisponível", error);
     renderCollection({ state: "error", lastCompleteAt });
     lastPollAt = Date.now() + skew;
-    nextRefreshAt = lastPollAt + POLL_INTERVAL_MS;
+    nextRefreshAt = lastPollAt + pollIntervalMs;
     tickClock();
   } finally {
     loading = false;
-    if (document.visibilityState === "visible") refreshTimer = setTimeout(loadSnapshot, POLL_INTERVAL_MS);
+    if (document.visibilityState === "visible") refreshTimer = setTimeout(loadSnapshot, pollIntervalMs);
   }
 }
 document.addEventListener("visibilitychange", () => {
