@@ -81,8 +81,11 @@ Antes das 17h de Brasília, a API devolve o estado de espera sem consultar o KV.
 A página em modo TSE consulta a API no máximo uma vez por minuto enquanto
 estiver visível; a simulação mantém seu intervalo próprio. Ao voltar de uma aba
 oculta, consulta imediatamente. O endereço antigo
-`varrendo-a-esquerda.pages.dev` usa o mesmo KV e deve receber a mesma versão
-para não continuar consumindo leituras desnecessárias.
+`varrendo-a-esquerda.pages.dev` está temporariamente em modo estático para
+preservar a cota diária de Pages Functions. Publique `legacy-public/` apenas
+no projeto Pages antigo: novas visitas são redirecionadas para
+`eleicoesbr.pages.dev`, e chamadas antigas a `/api/*` recebem um JSON estático
+sem executar a função. O projeto principal continua sendo publicado de `public/`.
 
 O painel de saúde da coleta, no topo, separa o período anterior às 17h da
 espera pela primeira rodada, de uma coleta atualizada, da próxima rodada
